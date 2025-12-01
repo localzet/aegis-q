@@ -1,0 +1,14 @@
+[package]
+name = "transport"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+aegis-q-core = { path = "../core" }
+pq-primitives = { path = "../pq-primitives" }
+utils = { path = "../utils" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
