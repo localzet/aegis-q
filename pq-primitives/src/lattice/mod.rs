@@ -4,10 +4,12 @@
 //! Parameters: n = 4096, q = 2^32 - 5
 //! Uses NTT (Number Theoretic Transform) for efficient polynomial multiplication
 
-use sha3::Sha3_512;
-use hkdf::Hkdf;
+use utils::kdf::kdf_shake256_fill;
 
 /// Lattice parameters
+#[cfg(feature = "small_params")]
+pub const N: usize = 256;
+#[cfg(not(feature = "small_params"))]
 pub const N: usize = 4096;
 pub const Q: u64 = 0xFFFFFFFF - 5; // 2^32 - 5
 
@@ -16,25 +18,13 @@ pub type LatticeState = Vec<u32>;
 
 /// Generate lattice parameters from master key using SHAKE-256 (XOF)
 pub fn derive_lattice_params(key: &[u8], nonce: &[u8]) -> (LatticeState, LatticeState) {
-    use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
-
-    fn expand(label: &[u8], key: &[u8], nonce: &[u8], out: &mut [u8]) {
-        let mut hasher = Shake256::default();
-        hasher.update(b"aegis-q-lattice");
-        hasher.update(label);
-        hasher.update(key);
-        hasher.update(nonce);
-        let mut reader = hasher.finalize_xof();
-        reader.read(out);
-    }
-
     // Derive 'a' parameter
     let mut a_bytes = vec![0u8; N * 4];
-    expand(b"a", key, nonce, &mut a_bytes);
+    kdf_shake256_fill(b"aegis-q-lattice-a", key, nonce, &mut a_bytes);
 
     // Derive 'b' parameter
     let mut b_bytes = vec![0u8; N * 4];
-    expand(b"b", key, nonce, &mut b_bytes);
+    kdf_shake256_fill(b"aegis-q-lattice-b", key, nonce, &mut b_bytes);
 
     // Convert bytes to u32 coefficients (mod q)
     let a: LatticeState = a_bytes

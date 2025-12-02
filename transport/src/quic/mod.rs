@@ -4,9 +4,7 @@
 //! Session management and stream handling
 
 use aegis_q_core::{aegis_q_encrypt, aegis_q_decrypt};
-use crate::framing::Frame;
-use sha3::{Digest, Sha3_512};
-use hkdf::Hkdf;
+use utils::kdf::kdf_shake256_fill;
 
 /// QUIC session
 pub struct QuicSession {
@@ -36,8 +34,12 @@ impl QuicSession {
     pub fn encrypt_stream(&self, stream_id: u32, data: &[u8], sequence: u64) -> Vec<u8> {
         // Derive stream-specific key
         let mut stream_key = vec![0u8; 64];
-        let hk = Hkdf::<Sha3_512>::new(Some(&self.session_nonce), &self.session_key);
-        hk.expand(&stream_id.to_le_bytes(), &mut stream_key).unwrap();
+        kdf_shake256_fill(
+            b"aegis-q-transport-quic-stream-key",
+            &self.session_key,
+            &stream_id.to_le_bytes(),
+            &mut stream_key,
+        );
         
         // Create nonce with stream ID and sequence
         let mut nonce = self.session_nonce.clone();
@@ -51,8 +53,12 @@ impl QuicSession {
     pub fn decrypt_stream(&self, stream_id: u32, ciphertext: &[u8], sequence: u64) -> Result<Vec<u8>, &'static str> {
         // Derive stream-specific key
         let mut stream_key = vec![0u8; 64];
-        let hk = Hkdf::<Sha3_512>::new(Some(&self.session_nonce), &self.session_key);
-        hk.expand(&stream_id.to_le_bytes(), &mut stream_key).unwrap();
+        kdf_shake256_fill(
+            b"aegis-q-transport-quic-stream-key",
+            &self.session_key,
+            &stream_id.to_le_bytes(),
+            &mut stream_key,
+        );
         
         // Create nonce with stream ID and sequence
         let mut nonce = self.session_nonce.clone();

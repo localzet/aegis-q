@@ -5,7 +5,7 @@
 
 use aegis_q_core::{aegis_q_encrypt, aegis_q_decrypt};
 use sha3::{Digest, Sha3_512};
-use hkdf::Hkdf;
+use utils::kdf::kdf_shake256_fill;
 
 /// Ratchet state
 pub struct RatchetState {
@@ -25,12 +25,10 @@ impl RatchetState {
         let dh_private = vec![0u8; 32]; // Placeholder
         let dh_public = vec![0u8; 32]; // Placeholder
         
-        // Derive initial chain keys
-        let hk = Hkdf::<Sha3_512>::new(None, &root_key);
         let mut chain_key_send = vec![0u8; 64];
-        hk.expand(b"chain-key-send", &mut chain_key_send).unwrap();
         let mut chain_key_recv = vec![0u8; 64];
-        hk.expand(b"chain-key-recv", &mut chain_key_recv).unwrap();
+        kdf_shake256_fill(b"aegis-q-messenger-ratchet-chain-send", &root_key, &[], &mut chain_key_send);
+        kdf_shake256_fill(b"aegis-q-messenger-ratchet-chain-recv", &root_key, &[], &mut chain_key_recv);
         
         Self {
             dh_private,
@@ -47,8 +45,12 @@ impl RatchetState {
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Vec<u8> {
         // Derive message key
         let mut message_key = vec![0u8; 64];
-        let hk = Hkdf::<Sha3_512>::new(None, &self.chain_key_send);
-        hk.expand(b"message-key", &mut message_key).unwrap();
+        kdf_shake256_fill(
+            b"aegis-q-messenger-ratchet-message-send",
+            &self.chain_key_send,
+            &self.message_number_send.to_le_bytes(),
+            &mut message_key,
+        );
         
         // Create nonce from message number
         let nonce = self.message_number_send.to_le_bytes().to_vec();
@@ -66,8 +68,12 @@ impl RatchetState {
     pub fn decrypt(&mut self, ciphertext: &[u8]) -> Result<Vec<u8>, &'static str> {
         // Derive message key
         let mut message_key = vec![0u8; 64];
-        let hk = Hkdf::<Sha3_512>::new(None, &self.chain_key_recv);
-        hk.expand(b"message-key", &mut message_key).unwrap();
+        kdf_shake256_fill(
+            b"aegis-q-messenger-ratchet-message-recv",
+            &self.chain_key_recv,
+            &self.message_number_recv.to_le_bytes(),
+            &mut message_key,
+        );
         
         // Create nonce from message number
         let nonce = self.message_number_recv.to_le_bytes().to_vec();

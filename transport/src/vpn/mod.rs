@@ -4,9 +4,9 @@
 //! Handshake protocol and stream wrapper
 
 use aegis_q_core::{aegis_q_init, State};
+use utils::kdf::kdf_shake256_fill;
 use crate::framing::{Frame, FrameType};
 use sha3::{Digest, Sha3_512};
-use hkdf::Hkdf;
 
 /// VPN session state
 pub struct VpnSession {
@@ -21,14 +21,12 @@ pub struct VpnSession {
 impl VpnSession {
     /// Create new VPN session from handshake
     pub fn from_handshake(shared_secret: &[u8], nonce: &[u8]) -> Self {
-        // Derive encryption and decryption keys
-        let hk = Hkdf::<Sha3_512>::new(Some(nonce), shared_secret);
-        
+        // Derive encryption and decryption keys with explicit domains
         let mut encrypt_key = vec![0u8; 64];
-        hk.expand(b"aegis-q-vpn-encrypt", &mut encrypt_key).unwrap();
-        
+        kdf_shake256_fill(b"aegis-q-transport-vpn-encrypt", shared_secret, nonce, &mut encrypt_key);
+
         let mut decrypt_key = vec![0u8; 64];
-        hk.expand(b"aegis-q-vpn-decrypt", &mut decrypt_key).unwrap();
+        kdf_shake256_fill(b"aegis-q-transport-vpn-decrypt", shared_secret, nonce, &mut decrypt_key);
         
         let encrypt_state = aegis_q_init(&encrypt_key, nonce);
         let decrypt_state = aegis_q_init(&decrypt_key, nonce);
@@ -49,8 +47,12 @@ impl VpnSession {
         
         // Derive per-frame key
         let mut frame_key = vec![0u8; 64];
-        let hk = Hkdf::<Sha3_512>::new(Some(&self.encrypt_nonce), &self.encrypt_state.to_bytes());
-        hk.expand(&self.sequence_send.to_le_bytes(), &mut frame_key).unwrap();
+        kdf_shake256_fill(
+            b"aegis-q-transport-vpn-frame",
+            &self.encrypt_state.to_bytes(),
+            &self.sequence_send.to_le_bytes(),
+            &mut frame_key,
+        );
         
         let frame_nonce = {
             let mut n = self.encrypt_nonce.clone();
@@ -74,8 +76,12 @@ impl VpnSession {
         
         // Derive per-frame key
         let mut frame_key = vec![0u8; 64];
-        let hk = Hkdf::<Sha3_512>::new(Some(&self.decrypt_nonce), &self.decrypt_state.to_bytes());
-        hk.expand(&self.sequence_recv.to_le_bytes(), &mut frame_key).unwrap();
+        kdf_shake256_fill(
+            b"aegis-q-transport-vpn-frame",
+            &self.decrypt_state.to_bytes(),
+            &self.sequence_recv.to_le_bytes(),
+            &mut frame_key,
+        );
         
         let frame_nonce = {
             let mut n = self.decrypt_nonce.clone();

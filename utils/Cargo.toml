@@ -8,4 +8,5 @@ license.workspace = true
 [dependencies]
 rand = { workspace = true }
 rand_core = { workspace = true }
+sha3 = { workspace = true }
 

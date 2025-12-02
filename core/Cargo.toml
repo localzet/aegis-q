@@ -20,3 +20,6 @@ criterion = { workspace = true }
 name = "aegis_q_bench"
 harness = false
 
+[features]
+small_params = []
+

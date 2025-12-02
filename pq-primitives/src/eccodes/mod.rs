@@ -5,9 +5,12 @@
 //! Strictly linear operations, O(n²) complexity
 
 use sha3::{Digest, Sha3_512};
-use hkdf::Hkdf;
+use utils::kdf::kdf_shake256;
 
 /// Code dimension
+#[cfg(feature = "small_params")]
+pub const CODE_N: usize = 256;
+#[cfg(not(feature = "small_params"))]
 pub const CODE_N: usize = 4096;
 
 /// Generator matrix type (sparse representation for efficiency)
@@ -20,20 +23,21 @@ pub struct GeneratorMatrix {
 impl GeneratorMatrix {
     /// Generate generator matrix from key using HKDF
     pub fn from_key(key: &[u8], nonce: &[u8]) -> Self {
-        let hk = Hkdf::<Sha3_512>::new(Some(nonce), key);
-        
         // Derive matrix entries deterministically
         let mut entries = Vec::new();
-        let mut counter = 0u64;
         
         // Generate sparse matrix (density ~0.1 for efficiency)
         for row in 0..CODE_N {
             for col in 0..CODE_N {
                 // Sparse: only include ~10% of entries
-                let mut seed = vec![0u8; 64];
-                hk.expand(&format!("matrix-{}-{}", row, col).into_bytes(), &mut seed).unwrap();
-                
-                let hash = Sha3_512::digest(&seed);
+                let seed = kdf_shake256(
+                    b"aegis-q-codemix-matrix",
+                    key,
+                    &format!("{}-{}", row, col).into_bytes(),
+                    64,
+                );
+
+                let hash = Sha3_512::digest(seed);
                 let should_include = hash[0] < 25; // ~10% density
                 
                 if should_include {
@@ -42,7 +46,6 @@ impl GeneratorMatrix {
                     ]);
                     entries.push((row, col, value));
                 }
-                counter += 1;
             }
         }
         
@@ -80,16 +83,18 @@ pub struct Permutation {
 impl Permutation {
     /// Generate permutation from key using HKDF
     pub fn from_key(key: &[u8], nonce: &[u8]) -> Self {
-        let hk = Hkdf::<Sha3_512>::new(Some(nonce), key);
-        
         // Generate permutation using Fisher-Yates shuffle with deterministic RNG
         let mut perm: Vec<usize> = (0..CODE_N).collect();
         
         // Deterministic shuffle based on key
         for i in (1..CODE_N).rev() {
-            let mut seed = vec![0u8; 64];
-            hk.expand(&format!("perm-{}", i).into_bytes(), &mut seed).unwrap();
-            let hash = Sha3_512::digest(&seed);
+            let seed = kdf_shake256(
+                b"aegis-q-codemix-perm",
+                key,
+                &format!("{}", i).into_bytes(),
+                64,
+            );
+            let hash = Sha3_512::digest(seed);
             let j = u64::from_le_bytes([
                 hash[0], hash[1], hash[2], hash[3],
                 hash[4], hash[5], hash[6], hash[7],

@@ -14,6 +14,9 @@ use pq_primitives::zk::zk_mix;
 use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
 
 /// Number of rounds
+#[cfg(feature = "small_params")]
+pub const ROUNDS: usize = 3;
+#[cfg(not(feature = "small_params"))]
 pub const ROUNDS: usize = 10;
 
 /// Apply MaskMix transformation
