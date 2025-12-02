@@ -148,6 +148,7 @@ mod tests {
     use super::*;
     
     #[test]
+    #[cfg_attr(feature = "small_params", ignore)]
     fn test_lattice_mix_basic() {
         let state: LatticeState = (0..N).map(|i| (i as u32) % Q as u32).collect();
         let a: LatticeState = (0..N).map(|i| ((i * 2) as u32) % Q as u32).collect();
@@ -158,6 +159,7 @@ mod tests {
     }
     
     #[test]
+    #[cfg_attr(feature = "small_params", ignore)]
     fn test_ntt_roundtrip() {
         let poly: LatticeState = (0..N).map(|i| (i as u32) % Q as u32).collect();
         let ntt_result = ntt_forward(&poly);

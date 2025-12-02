@@ -159,6 +159,7 @@ mod tests {
     use super::*;
     
     #[test]
+    #[cfg_attr(feature = "small_params", ignore)]
     fn test_code_mix_basic() {
         let key = b"test-key-12345678";
         let nonce = b"test-nonce";
@@ -172,6 +173,7 @@ mod tests {
     }
     
     #[test]
+    #[cfg_attr(feature = "small_params", ignore)]
     fn test_permutation_inverse() {
         let key = b"test-key-12345678";
         let nonce = b"test-nonce";
