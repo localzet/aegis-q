@@ -14,18 +14,28 @@ pub const Q: u64 = 0xFFFFFFFF - 5; // 2^32 - 5
 /// LatticeMix state (polynomial in R_q)
 pub type LatticeState = Vec<u32>;
 
-/// Generate lattice parameters from master key using HKDF-SHA3-512
+/// Generate lattice parameters from master key using SHAKE-256 (XOF)
 pub fn derive_lattice_params(key: &[u8], nonce: &[u8]) -> (LatticeState, LatticeState) {
-    let hk = Hkdf::<Sha3_512>::new(Some(nonce), key);
-    
+    use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
+
+    fn expand(label: &[u8], key: &[u8], nonce: &[u8], out: &mut [u8]) {
+        let mut hasher = Shake256::default();
+        hasher.update(b"aegis-q-lattice");
+        hasher.update(label);
+        hasher.update(key);
+        hasher.update(nonce);
+        let mut reader = hasher.finalize_xof();
+        reader.read(out);
+    }
+
     // Derive 'a' parameter
     let mut a_bytes = vec![0u8; N * 4];
-    hk.expand(b"aegis-q-lattice-a", &mut a_bytes).unwrap();
-    
+    expand(b"a", key, nonce, &mut a_bytes);
+
     // Derive 'b' parameter
     let mut b_bytes = vec![0u8; N * 4];
-    hk.expand(b"aegis-q-lattice-b", &mut b_bytes).unwrap();
-    
+    expand(b"b", key, nonce, &mut b_bytes);
+
     // Convert bytes to u32 coefficients (mod q)
     let a: LatticeState = a_bytes
         .chunks_exact(4)
@@ -34,7 +44,7 @@ pub fn derive_lattice_params(key: &[u8], nonce: &[u8]) -> (LatticeState, Lattice
             (val as u64 % Q) as u32
         })
         .collect();
-    
+
     let b: LatticeState = b_bytes
         .chunks_exact(4)
         .map(|chunk| {
@@ -42,7 +52,7 @@ pub fn derive_lattice_params(key: &[u8], nonce: &[u8]) -> (LatticeState, Lattice
             (val as u64 % Q) as u32
         })
         .collect();
-    
+
     (a, b)
 }
 

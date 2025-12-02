@@ -6,6 +6,7 @@
 use aegis_q_core::{aegis_q_encrypt, aegis_q_decrypt};
 use serde::{Serialize, Deserialize};
 use sha3::{Digest, Sha3_256};
+use utils::rng::random_bytes;
 
 /// Storage key derivation
 pub fn derive_storage_key(master_key: &[u8], purpose: &str) -> Vec<u8> {
@@ -27,7 +28,7 @@ impl StorageEntry {
     /// Store data
     pub fn store(data: &[u8], master_key: &[u8], purpose: &str) -> Self {
         let storage_key = derive_storage_key(master_key, purpose);
-        let nonce = vec![0u8; 16]; // In production, use random nonce
+        let nonce = random_bytes(16);
         
         let encrypted_data = aegis_q_encrypt(&storage_key, &nonce, data);
         

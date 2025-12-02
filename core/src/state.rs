@@ -40,14 +40,22 @@ impl State {
     
     /// Initialize state from key and nonce
     pub fn from_key(key: &[u8], nonce: &[u8]) -> Self {
-        use sha3::{Digest, Sha3_512};
-        use hkdf::Hkdf;
-        
-        let hk = Hkdf::<Sha3_512>::new(Some(nonce), key);
-        
+        use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
+
+        // Helper to expand with SHAKE256 using domain separation
+        fn shake_expand(label: &[u8], key: &[u8], nonce: &[u8], out: &mut [u8]) {
+            let mut hasher = Shake256::default();
+            hasher.update(b"aegis-q-state");
+            hasher.update(label);
+            hasher.update(key);
+            hasher.update(nonce);
+            let mut reader = hasher.finalize_xof();
+            reader.read(out);
+        }
+
         // Derive lattice state
         let mut lattice_bytes = vec![0u8; LATTICE_N * 4];
-        hk.expand(b"aegis-q-state-lattice", &mut lattice_bytes).unwrap();
+        shake_expand(b"lattice", key, nonce, &mut lattice_bytes);
         let lattice: LatticeState = lattice_bytes
             .chunks_exact(4)
             .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
@@ -55,7 +63,7 @@ impl State {
         
         // Derive code state
         let mut code_bytes = vec![0u8; CODE_N * 4];
-        hk.expand(b"aegis-q-state-code", &mut code_bytes).unwrap();
+        shake_expand(b"code", key, nonce, &mut code_bytes);
         let code: CodeState = code_bytes
             .chunks_exact(4)
             .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
@@ -63,12 +71,12 @@ impl State {
         
         // Derive ZK state
         let mut zk_bytes = vec![0u8; pq_primitives::zk::ZK_STATE_SIZE];
-        hk.expand(b"aegis-q-state-zk", &mut zk_bytes).unwrap();
+        shake_expand(b"zk", key, nonce, &mut zk_bytes);
         let zk = zk_bytes;
         
         // Derive mask state
         let mut mask_bytes = vec![0u8; 64];
-        hk.expand(b"aegis-q-state-mask", &mut mask_bytes).unwrap();
+        shake_expand(b"mask", key, nonce, &mut mask_bytes);
         let mask = mask_bytes;
         
         Self {

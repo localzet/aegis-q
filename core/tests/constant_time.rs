@@ -1,6 +1,6 @@
 //! Constant-time operation tests
 
-use aegis_q_core::{aegis_q_encrypt, aegis_q_decrypt};
+use aegis_q_core::aegis_q_encrypt;
 use std::time::Instant;
 
 #[test]
@@ -19,16 +19,16 @@ fn test_constant_time_encryption() {
     let plaintext3: Vec<u8> = (0..1000).map(|i| (i % 256) as u8).collect();
     
     let times = vec![
-        measure_time(|| aegis_q_encrypt(key, nonce, &plaintext1)),
-        measure_time(|| aegis_q_encrypt(key, nonce, &plaintext2)),
-        measure_time(|| aegis_q_encrypt(key, nonce, &plaintext3)),
+        measure_time(|| { let _ = aegis_q_encrypt(key, nonce, &plaintext1); }),
+        measure_time(|| { let _ = aegis_q_encrypt(key, nonce, &plaintext2); }),
+        measure_time(|| { let _ = aegis_q_encrypt(key, nonce, &plaintext3); }),
     ];
     
     // Times should be similar (within 2x variance for measurement noise)
     let avg_time = times.iter().sum::<u64>() / times.len() as u64;
     for &time in &times {
-        assert!(time as f64 / avg_time as f64 < 2.0);
-        assert!(avg_time as f64 / time as f64 < 2.0);
+        assert!((time as f64) / (avg_time as f64) < 2.0);
+        assert!((avg_time as f64) / (time as f64) < 2.0);
     }
 }
 

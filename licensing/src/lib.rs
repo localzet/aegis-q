@@ -30,6 +30,9 @@ impl License {
     /// Sign license
     pub fn sign(&mut self, signing_key: &[u8]) {
         let mut hasher = Sha3_512::new();
+        // Domain separation for license signing
+        hasher.update(b"aegis-q-license-sign");
+        hasher.update(signing_key);
         hasher.update(&self.license_id.as_bytes());
         for feature in &self.features {
             hasher.update(feature.as_bytes());
@@ -41,6 +44,9 @@ impl License {
     /// Verify license signature
     pub fn verify(&self, signing_key: &[u8]) -> bool {
         let mut hasher = Sha3_512::new();
+        // Domain separation for license signing
+        hasher.update(b"aegis-q-license-sign");
+        hasher.update(signing_key);
         hasher.update(&self.license_id.as_bytes());
         for feature in &self.features {
             hasher.update(feature.as_bytes());
