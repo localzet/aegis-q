@@ -101,7 +101,7 @@ pub fn aegis_q_decrypt(key: &[u8], nonce: &[u8], ciphertext: &[u8]) -> Result<Ve
 /// Uses SHAKE-256 to derive keystream from state
 fn kdf(state: &State, length: usize) -> Vec<u8> {
     let mut hasher = Shake256::default();
-    hasher.update(&state.to_bytes());
+    Update::update(&mut hasher, &state.to_bytes());
     
     let mut reader = hasher.finalize_xof();
     let mut keystream = vec![0u8; length];
@@ -112,11 +112,11 @@ fn kdf(state: &State, length: usize) -> Vec<u8> {
 
 /// Generate authentication tag
 fn generate_tag(state: &State, data: &[u8]) -> Vec<u8> {
-    use sha3::Sha3_256;
+    use sha3::{Sha3_256, digest::Update};
     
     let mut hasher = Sha3_256::new();
-    hasher.update(&state.to_bytes());
-    hasher.update(data);
+    Update::update(&mut hasher, &state.to_bytes());
+    Update::update(&mut hasher, data);
     hasher.finalize().to_vec()
 }
 

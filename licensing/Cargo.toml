@@ -11,4 +11,5 @@ pq-primitives = { path = "../pq-primitives" }
 utils = { path = "../utils" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha3 = { workspace = true }
 

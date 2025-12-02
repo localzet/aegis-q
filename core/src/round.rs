@@ -11,7 +11,7 @@ use crate::state::State;
 use pq_primitives::lattice::{lattice_mix, derive_lattice_params};
 use pq_primitives::eccodes::{code_mix, GeneratorMatrix, Permutation};
 use pq_primitives::zk::zk_mix;
-use sha3::{Digest, Shake256, digest::{Update, ExtendableOutput, XofReader}};
+use sha3::{Shake256, digest::{Update, ExtendableOutput, XofReader}};
 
 /// Number of rounds
 pub const ROUNDS: usize = 10;

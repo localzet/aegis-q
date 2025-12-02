@@ -21,8 +21,8 @@ pub fn zk_mix(state: &ZKState, nonce: &[u8]) -> ZKState {
     
     // H(r || x) where r is nonce, x is state
     let mut hasher = Sha3_512::new();
-    hasher.update(nonce);
-    hasher.update(state);
+    Update::update(&mut hasher, nonce);
+    Update::update(&mut hasher, state);
     let hash = hasher.finalize();
     
     // XOR with original state (constant-time)
@@ -41,8 +41,8 @@ pub fn zk_mix(state: &ZKState, nonce: &[u8]) -> ZKState {
 pub fn zk_simulate(nonce: &[u8], rng: &mut impl FnMut() -> u8) -> ZKState {
     // H(r || 0)
     let mut hasher = Sha3_512::new();
-    hasher.update(nonce);
-    hasher.update(&vec![0u8; ZK_STATE_SIZE]);
+    Update::update(&mut hasher, nonce);
+    Update::update(&mut hasher, &vec![0u8; ZK_STATE_SIZE]);
     let hash = hasher.finalize();
     
     // XOR with random
@@ -59,8 +59,8 @@ pub fn zk_mix_shake(state: &ZKState, nonce: &[u8]) -> ZKState {
     assert_eq!(state.len(), ZK_STATE_SIZE);
     
     let mut hasher = Shake256::default();
-    hasher.update(nonce);
-    hasher.update(state);
+    Update::update(&mut hasher, nonce);
+    Update::update(&mut hasher, state);
     let mut reader = hasher.finalize_xof();
     
     let mut hash = vec![0u8; ZK_STATE_SIZE];

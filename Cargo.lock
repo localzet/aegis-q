@@ -394,6 +394,7 @@ dependencies = [
  "pq-primitives",
  "serde",
  "serde_json",
+ "sha3",
  "utils",
 ]
 
@@ -414,9 +415,11 @@ name = "messenger"
 version = "0.1.0"
 dependencies = [
  "aegis-q-core",
+ "hkdf",
  "pq-primitives",
  "serde",
  "serde_json",
+ "sha3",
  "utils",
 ]
 
@@ -800,9 +803,11 @@ name = "transport"
 version = "0.1.0"
 dependencies = [
  "aegis-q-core",
+ "hkdf",
  "pq-primitives",
  "serde",
  "serde_json",
+ "sha3",
  "utils",
 ]
 

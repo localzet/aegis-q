@@ -4,9 +4,8 @@
 //! Parameters: n = 4096, q = 2^32 - 5
 //! Uses NTT (Number Theoretic Transform) for efficient polynomial multiplication
 
-use sha3::{Digest, Sha3_512};
+use sha3::Sha3_512;
 use hkdf::Hkdf;
-use utils::rng::random_u32;
 
 /// Lattice parameters
 pub const N: usize = 4096;
